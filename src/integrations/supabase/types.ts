@@ -14,6 +14,146 @@ export type Database = {
   }
   public: {
     Tables: {
+      batches: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          program: string
+          schedule: string | null
+          start_date: string | null
+          status: string
+          trainer: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          program: string
+          schedule?: string | null
+          start_date?: string | null
+          status?: string
+          trainer?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          program?: string
+          schedule?: string | null
+          start_date?: string | null
+          status?: string
+          trainer?: string | null
+        }
+        Relationships: []
+      }
+      certificate_requests: {
+        Row: {
+          certificate_no: string | null
+          certificate_type: string
+          created_at: string
+          id: string
+          purpose: string | null
+          remark: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          certificate_no?: string | null
+          certificate_type: string
+          created_at?: string
+          id?: string
+          purpose?: string | null
+          remark?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          certificate_no?: string | null
+          certificate_type?: string
+          created_at?: string
+          id?: string
+          purpose?: string | null
+          remark?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fee_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          note: string | null
+          paid_on: string
+          payment_mode: string
+          receipt_no: string
+          student_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_on?: string
+          payment_mode: string
+          receipt_no: string
+          student_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_on?: string
+          payment_mode?: string
+          receipt_no?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_requests: {
+        Row: {
+          created_at: string
+          from_date: string
+          id: string
+          reason: string
+          remark: string | null
+          status: string
+          to_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_date: string
+          id?: string
+          reason: string
+          remark?: string | null
+          status?: string
+          to_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_date?: string
+          id?: string
+          reason?: string
+          remark?: string | null
+          status?: string
+          to_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       student_feedback: {
         Row: {
           category: string | null
@@ -61,6 +201,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      students: {
+        Row: {
+          admission_year: string | null
+          batch_id: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          program: string | null
+          status: string
+          student_code: string
+          user_id: string | null
+        }
+        Insert: {
+          admission_year?: string | null
+          batch_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          program?: string | null
+          status?: string
+          student_code: string
+          user_id?: string | null
+        }
+        Update: {
+          admission_year?: string | null
+          batch_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          program?: string | null
+          status?: string
+          student_code?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
