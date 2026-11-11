@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-// @ts-expect-error -- plain JS data module without type declarations
 import { EXAM_SLOTS, MODULE_WINDOWS, loadDemoData } from "../campusly/data.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

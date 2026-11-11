@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useState } from "react";
 
-// @ts-expect-error untyped JS module
 const CampuslyApp = lazy(() => import("../campusly/App.jsx"));
 
 export const Route = createFileRoute("/")({
