@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AuthProvider } from "@/components/auth-provider";
 
 function NotFoundComponent() {
   return (
@@ -75,17 +76,14 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
-    // Replace these placeholders with the app's name and description when first building the app.
-    // Each content route, / included, must still set its own head(). Never add og:image or
-    // twitter:image here: every page without its own would inherit the root's preview image.
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Skill AI | Student Portal" },
+      { name: "description", content: "Skill AI student learning portal." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Skill AI | Student Portal" },
+      { property: "og:description", content: "Skill AI student learning portal." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
@@ -95,7 +93,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
     ],
   }),
   shellComponent: RootShell,
@@ -108,6 +106,15 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {import.meta.env.DEV && (
+          // Dev only: if the page reloads mid-edit and the app entry fails to load,
+          // retry once instead of leaving a blank screen.
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){function h(m){if(!/Failed to fetch dynamically imported module|Importing a module script failed/.test(String(m||'')))return;try{var k='__entry_retry',t=+sessionStorage.getItem(k)||0;if(Date.now()-t<10000)return;sessionStorage.setItem(k,String(Date.now()))}catch(e){}setTimeout(function(){location.reload()},800)}window.addEventListener('unhandledrejection',function(e){h(e.reason&&e.reason.message||e.reason)});window.addEventListener('error',function(e){h(e.message)})})();`,
+            }}
+          />
+        )}
         <HeadContent />
       </head>
       <body>
@@ -124,7 +131,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <AuthProvider>
+        <Outlet />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
