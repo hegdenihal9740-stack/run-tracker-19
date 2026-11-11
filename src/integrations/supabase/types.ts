@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      student_feedback: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          module_id: number
+          module_title: string
+          rating: number | null
+          staff_reply: string | null
+          status: string
+          target_module_id: number | null
+          target_module_title: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          message: string
+          module_id: number
+          module_title: string
+          rating?: number | null
+          staff_reply?: string | null
+          status?: string
+          target_module_id?: number | null
+          target_module_title?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          module_id?: number
+          module_title?: string
+          rating?: number | null
+          staff_reply?: string | null
+          status?: string
+          target_module_id?: number | null
+          target_module_title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
