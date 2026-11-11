@@ -18,7 +18,7 @@ function safeEqual(a: string, b: string) {
 }
 
 async function handle(request: Request, splat: string | undefined) {
-  const key = process.env.ADMIN_API_KEY;
+  const key = process.env['ADMIN_API_KEY'];
   const given = request.headers.get("x-api-key") ?? "";
   if (!key || !safeEqual(given, key)) return json({ error: "Unauthorized" }, 401);
 
