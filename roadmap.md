@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Connect real student login, profiles, fees, batches and requests to shared Cloud records
-- [ ] Add secure Admin student account invitations and integration instructions
-- [ ] Verify the connected flow with a real account
+- [x] Connect real student login, profiles, fees, batches and requests to shared Cloud records
+- [x] Add secure Admin student account invitations and integration instructions
+- [ ] Verify the connected flow with a real account — blocked by exhausted workspace credits; no student accounts exist yet
 - [ ] Connect the separate Admin folder — blocked until the user uploads that folder
 
 - [x] Add Feedback tab with course feedback, module shift requests and saved request history

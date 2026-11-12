@@ -15,16 +15,16 @@ describe('Shared student records', () => {
     expect(result.data.courses).toEqual([]);
   });
   it('reads recorded payments and staff decisions', async () => {
-    rows.values.fee_payments = [{ id: 'payment-1', amount: '2500', receipt_no: 'REC-1', payment_mode: 'UPI', paid_on: '2026-11-12' }];
-    rows.values.leave_requests = [{ id: 'leave-1', from_date: '2026-11-12', to_date: '2026-11-13', status: 'Approved', remark: 'Approved by office', created_at: '2026-11-12', details: {} }];
+    rows.values['fee_payments'] = [{ id: 'payment-1', amount: '2500', receipt_no: 'REC-1', payment_mode: 'UPI', paid_on: '2026-11-12' }];
+    rows.values['leave_requests'] = [{ id: 'leave-1', from_date: '2026-11-12', to_date: '2026-11-13', status: 'Approved', remark: 'Approved by office', created_at: '2026-11-12', details: {} }];
     const result = await loadStudentRecords('user-1');
-    expect(result.data.fees[0].amount).toBe(2500);
-    expect(result.data.fees[0].receipt).toBe('REC-1');
-    expect(result.data.leaves[0].status).toBe('Approved');
-    expect(result.data.leaves[0].days).toBe(2);
+    expect(result.data.fees[0]?.amount).toBe(2500);
+    expect(result.data.fees[0]?.receipt).toBe('REC-1');
+    expect(result.data.leaves[0]?.status).toBe('Approved');
+    expect(result.data.leaves[0]?.days).toBe(2);
   });
   it('does not open an inactive admission', async () => {
-    rows.values.students = { status: 'Inactive' };
+    rows.values['students'] = { status: 'Inactive' };
     await expect(loadStudentRecords('user-1')).rejects.toThrow('active admission');
   });
 });
