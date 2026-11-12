@@ -1,0 +1,3 @@
+export default function ConnectedBatch({ batch }) {
+  return <section className="page-stack"><h2>Assigned Batch</h2>{batch ? <><h3>{batch.name}</h3><p>{batch.program}</p><dl className="account-detail"><dt>Trainer</dt><dd>{batch.trainer || 'Not assigned'}</dd><dt>Schedule</dt><dd>{batch.schedule || 'Not scheduled'}</dd><dt>Start date</dt><dd>{batch.start_date || 'Not scheduled'}</dd><dt>Status</dt><dd>{batch.status}</dd></dl></> : <p>No batch assigned yet.</p>}</section>
+}

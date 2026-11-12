@@ -23,6 +23,20 @@ async function handle(request: Request, splat: string | undefined) {
   if (!key || !safeEqual(given, key)) return json({ error: "Unauthorized" }, 401);
 
   const [name, id, ...rest] = (splat ?? "").split("/").filter(Boolean);
+  if (name === 'students' && id && UUID.test(id) && rest.length === 1 && rest[0] === 'invite' && request.method === 'POST') {
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    const { data: student, error } = await supabaseAdmin.from('students').select('*').eq('id', id).maybeSingle();
+    if (error || !student) return json({ error: 'Student not found' }, 404);
+    if (student.user_id) return json({ error: 'Student already has an account' }, 409);
+    const { data: invited, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(student.email, { redirectTo: new URL('/reset-password', request.url).href, data: { name: student.name } });
+    if (inviteError || !invited.user) return json({ error: 'Could not invite student. Check the account and email settings.' }, 400);
+    const { error: linkError } = await supabaseAdmin.from('students').update({ user_id: invited.user.id }).eq('id', id);
+    if (linkError) {
+      await supabaseAdmin.auth.admin.deleteUser(invited.user.id);
+      return json({ error: 'Could not link the student account. Please retry.' }, 500);
+    }
+    return json({ data: { student_id: student.id, user_id: invited.user.id, invited: true } }, 201);
+  }
   if (!name) return json({ resources: Object.keys(RESOURCES) });
   if (!isResource(name) || rest.length) return json({ error: "Not found" }, 404);
   if (id && !UUID.test(id)) return json({ error: "Invalid id" }, 400);
@@ -41,7 +55,7 @@ async function handle(request: Request, splat: string | undefined) {
     const url = new URL(request.url);
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 50, 1), 200);
     const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
-    let q = db.select("*", { count: "exact" }).order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+    let q = db.select("*", { count: "exact" }).order(name === 'profiles' ? 'updated_at' : 'created_at', { ascending: false }).range(offset, offset + limit - 1);
     for (const f of res.filters) {
       const v = url.searchParams.get(f);
       if (v) q = q.eq(f, v.slice(0, 200));

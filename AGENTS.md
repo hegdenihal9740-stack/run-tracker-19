@@ -10,3 +10,6 @@
 <!-- LOVABLE:END -->
 
 - Admin portal integration goes through one REST route (`/api/public/admin/<resource>`) guarded by the `ADMIN_API_KEY` header; resources are declared in `src/lib/admin-api/resources.ts` so new ones need no new route files.
+- Registration sign-in verifies credentials on the server and returns only a verified session, never a public registration-to-email lookup.
+- Live student screens use owner-scoped Cloud records, while demo storage is isolated; unconnected academic records remain empty rather than invented.
+- Admin student invitations create and link real Auth accounts through the key-protected API; profiles auto-create on account creation and carry no privileges.

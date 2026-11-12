@@ -55,7 +55,9 @@ import BottomNav from './BottomNav.jsx'
 import { PortalNavigation, usePortalState, useResetNavigation } from './navigation.jsx'
 import { useCloudAuth } from '@/components/auth-provider'
 import { supabase } from '@/integrations/supabase/client'
-import { signInWithEmail, sendPasswordReset } from './cloudAuth'
+import { signInWithStudentIdentifier, sendPasswordReset } from './cloudAuth'
+import { loadStudentRecords } from './cloudRecords'
+import ConnectedBatch from './ConnectedBatch.jsx'
 
 const navGroups = [
   { label: 'LEARNING', items: [
@@ -174,12 +176,10 @@ function Login({ onLogin, previewMode }) {
         const { error } = await sendPasswordReset(email)
         if (error) setError(error.message)
         else setSent(true)
-      } else if (email.trim().toLowerCase() === DEMO_USER.email && password === DEMO_USER.password) {
+      } else if ([DEMO_USER.email, DEMO_USER.studentId.toLowerCase()].includes(email.trim().toLowerCase()) && password === DEMO_USER.password) {
         onLogin({ ...DEMO_USER })
-      } else if (!email.includes('@')) {
-        setError('Registration-number sign-in will be enabled when the admission portal is connected. You can sign in with your account email for now.')
       } else {
-        const { error } = await signInWithEmail(email, password)
+        const { error } = await signInWithStudentIdentifier(email, password)
         if (error) setError(error.message)
       }
     } catch { setError('Could not connect. Please try again.') }
@@ -618,17 +618,31 @@ function Modal({ title, onClose, children, wide, className = '', portal = false 
 }
 
 function Leave({ data, updateData }) {
+  const { user } = useCloudAuth()
+  const [busy, setBusy] = useState(false)
   const [showForm, setShowForm] = usePortalState('leaveForm', false)
   const [notice, setNotice] = useState('')
   const [form, setForm] = useState({ type: 'Personal', name: USER.name || '', course: USER.program || '', admission: USER.studentId || '', from: '', to: '', reason: '', rejoin: '', doc: '', guardian: '', agree: false })
   const [details, setDetails] = usePortalState('leaveDetails', null)
   const leaves = [...data.leaves].sort((a, b) => b.id.localeCompare(a.id))
-  function apply(e) {
+  async function apply(e) {
     e.preventDefault()
+    if (busy) return
     if (new Date(form.to) < new Date(form.from)) { setNotice('The end date must be on or after the start date.'); return }
     const days = form.daysEdited && Number(form.days) > 0 ? Number(form.days) : Math.round((new Date(form.to) - new Date(form.from)) / 86400000) + 1
     const fmt = date => new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     const item = { id: `LV-${Math.floor(1000 + Math.random() * 9000)}`, type: form.type, from: fmt(form.from), to: fmt(form.to), days, reason: form.reason, name: form.name, course: form.course, admission: form.admission, rejoin: form.rejoin ? fmt(form.rejoin) : '', doc: form.doc, guardian: form.guardian, status: 'Pending', remarks: 'Your request has been submitted and is awaiting staff review.', applied: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) }
+    setBusy(true)
+    try {
+      if (data.live) {
+        if (!user) throw new Error('Sign in again to submit your request.')
+        const { data: saved, error } = await supabase.from('leave_requests').insert({ user_id: user.id, from_date: form.from, to_date: form.to, reason: form.reason, details: form, status: 'Pending' }).select('id').single()
+        if (error) throw error
+        item.id = saved.id
+      }
+      updateData(d => ({ ...d, leaves: [item, ...d.leaves] }))
+    } catch { setNotice('Could not submit your leave request. Please try again.'); return }
+    finally { setBusy(false) }
     setForm({ type: 'Personal', name: USER.name || '', course: USER.program || '', admission: USER.studentId || '', from: '', to: '', reason: '', rejoin: '', doc: '', guardian: '', agree: false }); setShowForm(false); setNotice(`Leave request ${item.id} submitted successfully.`)
   }
   return <div className="page-stack"><SectionHeading eyebrow="TIME AWAY" title="Leave Applications" subtitle="Submit a request and follow its approval status." action={<button className="primary-button" onClick={() => setShowForm(true)}><CirclePlus size={16}/> Apply for leave</button>}/>{notice && <div className={cx('success-banner', notice.startsWith('The end') && 'error-banner')}><CheckCircle2 size={17}/>{notice}<button onClick={() => setNotice('')}><X size={15}/></button></div>}<div className="stats-grid three-stats"><StatCard icon={FileCheck2} label="Total requests" value={data.leaves.length} detail="Leave applications" tone="violet"/><StatCard icon={Clock3} label="Pending review" value={data.leaves.filter(l => l.status === 'Pending').length} detail="Awaiting a decision" tone="orange"/><StatCard icon={CheckCircle2} label="Approved" value={data.leaves.filter(l => l.status === 'Approved').length} detail="Approved requests" tone="green"/></div><Panel title="Your leave requests" subtitle="View the current status and any staff remarks"><div className="table-scroll"><table><thead><tr><th>REQUEST</th><th>LEAVE DATES</th><th>DAYS</th><th>STATUS</th><th/></tr></thead><tbody>{leaves.map(l => <tr key={l.id}><td><div className="leave-request-cell"><strong>{l.type} leave</strong><span>{l.id} · Applied {l.applied}</span></div></td><td>{l.from}{l.to !== l.from && <><br/><span className="muted-text">to {l.to}</span></>}</td><td>{l.days}</td><td><StatusPill>{l.status}</StatusPill></td><td><button className="text-button" onClick={() => setDetails(l)}>Details</button></td></tr>)}</tbody></table></div>{leaves.length === 0 && <EmptyState title="No leave requests yet" text="Use Apply for leave to submit your first request."/>}</Panel>{showForm && <Modal wide title="Apply for leave" onClose={() => setShowForm(false)}><form onSubmit={apply} className="leave-form"><LeaveLetter form={form} set={setForm} onFile={doc => setForm(f => ({ ...f, doc }))}/><label className="muted-text" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}><input type="checkbox" checked={form.agree} onChange={e => setForm({ ...form, agree: e.target.checked })} required style={{ width: 'auto', marginTop: 3 }}/>I confirm the details in this letter are correct.</label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Cancel</button><button className="primary-button" type="submit"><Send size={15}/> Submit application</button></div></form></Modal>}{details && <Modal wide title={`Leave request ${details.id}`} onClose={() => setDetails(null)}><div className="leave-detail-top"><div className="detail-badge"><FileCheck2 size={20}/></div><div><strong>{details.type} leave</strong><span>{details.from}{details.to !== details.from ? ` – ${details.to}` : ''} · {details.days} day(s)</span></div><StatusPill>{details.status}</StatusPill></div><LeaveLetter form={{ ...details, name: details.name || USER.name, course: details.course || USER.program, admission: details.admission || USER.studentId, fromLabel: details.from, toLabel: details.to, rejoinLabel: details.rejoin, dateLabel: details.applied }}/><div className="modal-actions"><button className="secondary-button" onClick={() => setDetails(null)}>Close</button><button className="primary-button" onClick={() => downloadLeaveDocx({ ...details, name: details.name || USER.name, course: details.course || USER.program, admission: details.admission || USER.studentId })}><Download size={15}/> Download letter (.docx)</button></div></Modal>}</div>
@@ -699,17 +713,32 @@ function PortalApp() {
   const [search, setSearch] = usePortalState('search', '')
   const showSearch = Boolean(search.trim())
   const resetNavigation = useResetNavigation()
+  const [recordError, setRecordError] = useState('')
+  const [recordReady, setRecordReady] = useState(false)
+  const [retryRecords, setRetryRecords] = useState(0)
 
   useEffect(() => {
     if (!authReady) return
+    let active = true
     if (cloudUser && !recovery) {
       localStorage.removeItem('campusly-demo-session')
-      setCurrentUser({ email: cloudUser.email || '', name: cloudUser.email?.split('@')[0] || 'Student', phone: '', program: '', batch: '', studentId: '', joined: '' })
-      setData(loadDemoData()); setLoggedIn(true)
+      setRecordReady(false); setRecordError(''); setLoggedIn(false)
+      loadStudentRecords(cloudUser.id).then(records => {
+        if (!active) return
+        setCurrentUser(records.account); setData(records.data); setOnboardingStep(null); setLoggedIn(true); setRecordReady(true)
+      }).catch(error => { if (active) { setRecordError(error.message || 'Could not load your student records.'); setRecordReady(true) } })
     } else if (localStorage.getItem('campusly-demo-session') !== DEMO_USER.email) setLoggedIn(false)
-  }, [cloudUser, authReady, recovery])
+    return () => { active = false }
+  }, [cloudUser, authReady, recovery, retryRecords])
 
-  useEffect(() => { saveDemoData(data) }, [data])
+  useEffect(() => {
+    if (!cloudUser || !loggedIn) return
+    const refresh = () => setRetryRecords(value => value + 1)
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [cloudUser, loggedIn])
+
+  useEffect(() => { if (!data.live) saveDemoData(data) }, [data])
   useEffect(() => { const onKey = e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); document.querySelector('.global-search input')?.focus() } }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey) }, [])
   useEffect(() => {
     // Ripple wave: spawn a soft circle under the pointer on any touchable press.
@@ -743,6 +772,8 @@ function PortalApp() {
   function reset() { setData(resetDemoData()); localStorage.removeItem(profileKey()) }
   function login(acc, skipDemoOnboarding = false) { setCurrentUser(acc); localStorage.setItem('campusly-demo-session', acc.email); setData(loadDemoData()); setOnboardingStep(acc.email === DEMO_USER.email && !skipDemoOnboarding ? getDemoOnboardingStep() : null); resetNavigation(); setLoggedIn(true) }
   if (!authReady) return <div className="login-main min-h-screen" role="status">Loading…</div>
+  if (cloudUser && !recovery && !recordReady) return <div className="login-main min-h-screen" role="status">Loading student records…</div>
+  if (cloudUser && !recovery && recordError) return <div className="login-main min-h-screen"><p role="alert">{recordError}</p><Button onClick={() => setRetryRecords(value => value + 1)}>Retry</Button><Button variant="outline" onClick={logout}>Sign out</Button></div>
   if (!loggedIn || recovery) return <Login onLogin={login} previewMode={previewMode}/>
   if (onboardingStep === 'password') return <StudentOnboarding step="password" onPasswordChanged={() => setOnboardingStep('profile')}/>
   if (onboardingStep === 'profile') return <StudentOnboarding step="profile" onProfileCompleted={() => setOnboardingStep(null)}/>
@@ -768,13 +799,13 @@ function PortalApp() {
             {page === 'dashboard' && <Dashboard data={data} setPage={setPage}/>}
             {page === 'courses' && <Courses data={data} setPage={setPage}/>}
             {page === 'materials' && <Materials data={data} search={search}/>}
-            {page === 'timetable' && <Timetable data={data}/>}
+            {page === 'timetable' && (data.live ? <ConnectedBatch batch={data.batch}/> : <Timetable data={data}/>)}
             {page === 'attendance' && <Attendance data={data}/>}
             {page === 'marks' && <Marks data={data}/>}
             {page === 'assignments' && <Assignments data={data} updateData={updateData}/>}
-            {page === 'classtests' && <ClassTests data={data} updateData={updateData}/>}
+            {page === 'classtests' && (data.courses.length ? <ClassTests data={data} updateData={updateData}/> : <EmptyState title="No class tests yet" text="Tests appear after your modules are assigned."/>)}
             {page === 'exams' && <ExamSlots data={data}/>}
-            {page === 'batch' && <MyBatch email={USER.email}/>}
+            {page === 'batch' && (data.live ? <ConnectedBatch batch={data.batch}/> : <MyBatch email={USER.email}/>)}
             {page === 'fees' && <Fees data={data}/>}
             {page === 'leave' && <Leave data={data} updateData={updateData}/>}
             {page === 'feedback' && <Feedback data={data} updateData={updateData}/>}
@@ -843,7 +874,7 @@ function ExamSlots({ data }) {
 }
 
 function Fees({ data }) {
-  const fees = getFeesForCourses(data.courses, USER.email === DEMO_USER.email ? FEES : [])
+  const fees = data.live ? data.fees : getFeesForCourses(data.courses, USER.email === DEMO_USER.email ? FEES : [])
   const [r, setR] = usePortalState('feeReceipt', null)
   const receiptDetails = r ? buildFeeReceiptData(r, fees, USER) : null
   const paid = fees.filter(x => x.status === 'Paid').reduce((a, b) => a + b.amount, 0)

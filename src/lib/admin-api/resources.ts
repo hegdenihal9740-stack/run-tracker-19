@@ -80,6 +80,10 @@ export const RESOURCES = {
     }),
     update: null as z.ZodTypeAny | null,
   },
+  profiles: {
+    table: 'profiles', filters: ['id'], search: ['display_name'], create: null as z.ZodTypeAny | null,
+    update: z.object({ display_name: z.string().max(120).optional(), details: z.record(z.unknown()).optional() }),
+  },
 } as const;
 
 // Students and batches can be edited with any create field.

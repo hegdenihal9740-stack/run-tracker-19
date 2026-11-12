@@ -3,6 +3,8 @@ import { CalendarDays, Camera, Check, GraduationCap, Mail, MapPin, Phone, Trash2
 import { Button } from '@/components/ui/button'
 import { USER, profileKey } from './data.js'
 import './profile.css'
+import { useCloudAuth } from '@/components/auth-provider'
+import { supabase } from '@/integrations/supabase/client'
 
 const personalFields = [
   ['studentId', 'Register No'], ['applicationNo', 'Application No'], ['name', 'Name'],
@@ -27,6 +29,7 @@ function displayValue(key, value) {
 }
 
 export default function StudentProfile() {
+  const { user } = useCloudAuth()
   const [profile, setProfile] = useState(baseProfile)
   const [tab, setTab] = useState('profile')
   const [saved, setSaved] = useState(false)
@@ -34,6 +37,7 @@ export default function StudentProfile() {
   const [photoBusy, setPhotoBusy] = useState(false)
   const photoInput = useRef(null)
   useEffect(() => {
+    if (user) { setProfile({ ...baseProfile(), photo: USER.photo || '' }); return }
     try {
       const stored = JSON.parse(localStorage.getItem(profileKey()) || 'null')
       if (stored) {
@@ -45,10 +49,13 @@ export default function StudentProfile() {
       }
     } catch {}
   }, [])
-  function storePhoto(photo) {
+  async function storePhoto(photo) {
     const next = { ...profile, photo }
     try {
-      localStorage.setItem(profileKey(), JSON.stringify(next))
+      if (user) {
+        const { error } = await supabase.from('profiles').update({ photo, updated_at: new Date().toISOString() }).eq('id', user.id)
+        if (error) throw error
+      } else localStorage.setItem(profileKey(), JSON.stringify(next))
       setProfile(next)
       setSaved(true)
       setPhotoError('')
@@ -82,7 +89,7 @@ export default function StudentProfile() {
       const context = canvas.getContext('2d')
       if (!context) throw new Error('Photo processing unavailable')
       context.drawImage(image, 0, 0, canvas.width, canvas.height)
-      storePhoto(canvas.toDataURL('image/jpeg', 0.85))
+      await storePhoto(canvas.toDataURL('image/jpeg', 0.85))
     } catch {
       setPhotoError('This photo could not be opened. Please choose a JPG, PNG or WebP image.')
     } finally {

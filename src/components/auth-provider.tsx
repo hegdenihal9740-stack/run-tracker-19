@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
     let revision = 0;
     const hash = new URLSearchParams(window.location.hash.slice(1));
-    if (hash.get("type") === "recovery") sessionStorage.setItem("skillai-recovery", "true");
+    if (['recovery', 'invite'].includes(hash.get("type") || '')) sessionStorage.setItem("skillai-recovery", "true");
     setRecovery(sessionStorage.getItem("skillai-recovery") === "true");
     const refresh = () => {
       const current = ++revision;

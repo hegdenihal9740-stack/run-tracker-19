@@ -2,15 +2,20 @@ import { useState } from 'react'
 import { Award, CheckCircle2, Lock, Send, X } from 'lucide-react'
 import { DEMO_USER, USER, FEES, MODULE_WINDOWS, getFeesForCourses, profileKey } from './data'
 import logoFull from '../assets/skillai-fee-logo.png'
+import { useCloudAuth } from '@/components/auth-provider'
+import { supabase } from '@/integrations/supabase/client'
 
 const fmt = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) }
 const today = () => new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 
 export default function CertificateRequest({ data, updateData }) {
+  const { user } = useCloudAuth()
+  const [busy, setBusy] = useState(false)
   const requests = data.certRequests || []
   const done = data.courses.filter(c => c.progress === 100).length
   const eligible = data.courses.length > 0 && done === data.courses.length
   const savedProfile = (() => {
+    if (data.live) return USER
     try {
       return JSON.parse(localStorage.getItem(profileKey()) || 'null') || {}
     } catch {
@@ -33,10 +38,22 @@ export default function CertificateRequest({ data, updateData }) {
   const marks = data.marks.filter(m => m.score != null)
   const appNo = `CA-${new Date().getFullYear()}-${String(requests.length + 1).padStart(3, '0')}`
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault()
+    if (busy) return
     if (!form.placement) { setNotice('Please choose Yes or No for placement.'); return }
-    updateData(d => ({ ...d, certRequests: [...(d.certRequests || []), { ...form, id: appNo, date: today(), status: 'Pending' }] }))
+    setBusy(true)
+    let id = appNo
+    try {
+      if (data.live) {
+        if (!user) throw new Error('Sign in required')
+        const { data: saved, error } = await supabase.from('certificate_requests').insert({ user_id: user.id, certificate_type: form.course, purpose: 'Course completion certificate', details: form, status: 'Pending' }).select('id').single()
+        if (error) throw error
+        id = saved.id
+      }
+      updateData(d => ({ ...d, certRequests: [...(d.certRequests || []), { ...form, id, date: today(), status: 'Pending' }] }))
+    } catch { setNotice('Could not submit the application. Please try again.'); return }
+    finally { setBusy(false) }
     setNotice(`Application ${appNo} sent. You will be told once it is approved.`)
   }
 

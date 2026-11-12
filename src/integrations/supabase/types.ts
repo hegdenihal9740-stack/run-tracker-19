@@ -52,6 +52,7 @@ export type Database = {
           certificate_no: string | null
           certificate_type: string
           created_at: string
+          details: Json
           id: string
           purpose: string | null
           remark: string | null
@@ -62,6 +63,7 @@ export type Database = {
           certificate_no?: string | null
           certificate_type: string
           created_at?: string
+          details?: Json
           id?: string
           purpose?: string | null
           remark?: string | null
@@ -72,6 +74,7 @@ export type Database = {
           certificate_no?: string | null
           certificate_type?: string
           created_at?: string
+          details?: Json
           id?: string
           purpose?: string | null
           remark?: string | null
@@ -124,6 +127,7 @@ export type Database = {
       leave_requests: {
         Row: {
           created_at: string
+          details: Json
           from_date: string
           id: string
           reason: string
@@ -134,6 +138,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          details?: Json
           from_date: string
           id?: string
           reason: string
@@ -144,6 +149,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          details?: Json
           from_date?: string
           id?: string
           reason?: string
@@ -151,6 +157,30 @@ export type Database = {
           status?: string
           to_date?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          details: Json
+          display_name: string
+          id: string
+          photo: string
+          updated_at: string
+        }
+        Insert: {
+          details?: Json
+          display_name?: string
+          id: string
+          photo?: string
+          updated_at?: string
+        }
+        Update: {
+          details?: Json
+          display_name?: string
+          id?: string
+          photo?: string
+          updated_at?: string
         }
         Relationships: []
       }
